@@ -54,4 +54,4 @@ jobs:
             pip install pymysql
             pip install sqlalchemy
             pip install fastapi
-            python3 -m uvicorn main:app --host 0.0.0.0 --port 8000
+            nohup python3 -m uvicorn main:app --host 0.0.0.0 --port 8000
