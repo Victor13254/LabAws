@@ -15,14 +15,18 @@ import app as lf
 # --------------------------
 # Helpers / Fakes para tests
 # --------------------------
+import io
 
 class FakeS3:
-    """S3 fake minimal para inyectar en lf.s3 (get_object)."""
     def __init__(self, payload: bytes):
-        self._payload = payload
+        self.payload = payload
 
     def get_object(self, Bucket, Key):
-        return {"Bo dy": BytesIO(self._payload)}
+        # boto3 retorna un dict con 'Body' = StreamingBody (file-like)
+        return {
+            "Body": io.BytesIO(self.payload),
+            "ContentType": "application/json",
+        }
 
 
 class FakeCursor:
