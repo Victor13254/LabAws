@@ -10,6 +10,10 @@ on:
 
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
+  
+concurrency:
+  group: labaws-app
+  cancel-in-progress: true
 
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
@@ -37,32 +41,57 @@ jobs:
       - name: Deploy to EC2 via SSH
         uses: appleboy/ssh-action@v1.0.3
         with:
-          host: ${{ secrets.EC2_HOST }}         # ej: ec2-XX-XX-XX-XX.compute-1.amazonaws.com
+          host: ${{ secrets.EC2_HOST }}
           username: ubuntu
-          key: ${{ secrets.EC2_SSH_KEY }}       # pega aquí tu llave privada (formato PEM) como secreto
+          key: ${{ secrets.EC2_SSH_KEY }}
           port: 22
           script_stop: true
+          timeout: 2m            # tiempo para establecer la conexión SSH
+          command_timeout: 40m   # tiempo máximo para ejecutar el script remoto
           script: |
             set -euo pipefail
+            command -v python3 >/dev/null 2>&1 || { sudo apt update && sudo apt install -y python3 python3-venv; }
+            command -v curl >/dev/null 2>&1 || { sudo apt update && sudo apt install -y curl; }
 
             cd ~
             if [ ! -d LabAws/.git ]; then
-                git clone -b app --single-branch https://github.com/Victor13254/LabAws.git
+              git clone -b app --single-branch https://github.com/Victor13254/LabAws.git
             fi
             cd LabAws
             git fetch origin
             git switch app || git switch -C app origin/app
             git pull --ff-only origin app
 
-            command -v python3 >/dev/null 2>&1 || { sudo apt update && sudo apt install -y python3 python3-venv; }
             if [ ! -d env ]; then python3 -m venv env; fi
             ./env/bin/python -m pip install --upgrade pip
-            
-            ./env/bin/pip install "fastapi[all]" uvicorn pymysql sqlalchemy
-            
+            if [ -f requirements.txt ]; then
+              ./env/bin/pip install -r requirements.txt
+            else
+              ./env/bin/pip install "fastapi[all]" uvicorn pymysql sqlalchemy
+            fi
 
+            # Stop previo limpio
+            if [ -f app.pid ]; then
+              OLD_PID="$(cat app.pid || true)"
+              if [ -n "${OLD_PID:-}" ] && ps -p "$OLD_PID" >/dev/null 2>&1; then
+                kill "$OLD_PID" || true
+                for i in $(seq 1 10); do ps -p "$OLD_PID" >/dev/null 2>&1 || break; sleep 1; done
+                ps -p "$OLD_PID" >/dev/null 2>&1 && kill -9 "$OLD_PID" || true
+              fi
+              rm -f app.pid
+            fi
             pkill -f "uvicorn.*main:app" || true
+            sleep 1
 
-
+            # Start en background con nohup
             nohup ./env/bin/python -m uvicorn main:app --host 0.0.0.0 --port 8000 > app.log 2>&1 &
-            
+            echo $! > app.pid
+
+            # Healthcheck (usa seq, no {1..10})
+            for i in $(seq 1 10); do
+              curl -fsS "http://127.0.0.1:8000/docs" >/dev/null && { echo "OK"; exit 0; }
+              sleep 1
+            done
+            echo "La app no respondió en tiempo razonable"
+            tail -n 200 app.log || true
+            exit 1
