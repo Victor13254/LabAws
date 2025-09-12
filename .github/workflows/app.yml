@@ -44,14 +44,25 @@ jobs:
           script_stop: true
           script: |
             set -euo pipefail
+
+            cd ~
+            if [ ! -d LabAws/.git ]; then
+                git clone -b app --single-branch https://github.com/Victor13254/LabAws.git
+            fi
+            cd LabAws
+            git fetch origin
+            git switch app || git switch -C app origin/app
+            git pull --ff-only origin app
+
+            command -v python3 >/dev/null 2>&1 || { sudo apt update && sudo apt install -y python3 python3-venv; }
+            if [ ! -d env ]; then python3 -m venv env; fi
+            ./env/bin/python -m pip install --upgrade pip
+            
+            ./env/bin/pip install "fastapi[all]" uvicorn pymysql sqlalchemy
+            
+
             pkill -f "uvicorn.*main:app" || true
-            rm -rf LabAws
-            git clone -b app --single-branch --depth 1 https://github.com/Victor13254/LabAws.git
-            cd ~/LabAws
-            python3 -m venv env
-            source env/bin/activate
-            pip install uvicorn
-            pip install pymysql
-            pip install sqlalchemy
-            pip install fastapi
-            nohup python3 -m uvicorn main:app --host 0.0.0.0 --port 8000 > app.log 2>&1 &
+
+
+            nohup ./env/bin/python -m uvicorn main:app --host 0.0.0.0 --port 8000 > app.log 2>&1 &
+            
