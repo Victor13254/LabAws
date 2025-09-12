@@ -45,7 +45,7 @@ jobs:
       - name: Execute tests
         run: |
           source env/bin/activate
-          pytest--junitxml=report.xml
+          pytest --junitxml=report.xml
           
       - name: Upload test results
         uses: actions/upload-artifact@v4
