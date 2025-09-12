@@ -2,7 +2,7 @@ import json
 import io
 import pytest
 from unittest.mock import patch, MagicMock
-from lambda_function import f   # importa tu lambda (ajusta si el archivo se llama distinto)
+from app import f   # importa tu lambda (ajusta si el archivo se llama distinto)
 
 @pytest.fixture
 def mock_event_context():
