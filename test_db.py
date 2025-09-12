@@ -22,7 +22,7 @@ class FakeS3:
         self._payload = payload
 
     def get_object(self, Bucket, Key):
-        return {"Body": BytesIO(self._payload)}
+        return {"Bo dy": BytesIO(self._payload)}
 
 
 class FakeCursor:
