@@ -11,7 +11,7 @@
         ],
         "project_name": "lambda-project",
         "runtime": "python3.10",
-        "s3_bucket": "dolar-raw-2025",
+        "s3_bucket": "dbzappavictors",
         "keep_warm": false,
         "apigateway_enabled": false,
         "manage_roles": false,
