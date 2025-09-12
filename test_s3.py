@@ -15,8 +15,8 @@ def test_f_guardado_correcto(mock_event_context):
     fake_data = b'{"dolar": 4000.55}'
     mock_response = io.BytesIO(fake_data)
 
-    with patch("lambda_function.urllib.request.urlopen", return_value=mock_response):
-        with patch("lambda_function.s3.put_object") as mock_put_object:
+    with patch("app.urllib.request.urlopen", return_value=mock_response):
+        with patch("app.s3.put_object") as mock_put_object:
             
             result = f(event, context)
 
